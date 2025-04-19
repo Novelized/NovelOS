@@ -39,9 +39,9 @@ define check_tools
 	$(info --- Checking Tools ---)
 	$(info Using CROSS_COMPILE prefix: [$(CROSS_COMPILE)])
 	@if [ -z "$(CROSS_COMPILE)" ]; then \
-		echo "ERROR: CROSS_COMPILE variable is not set."; \
-		echo "Please set it to your AArch64 toolchain prefix."; \
-		echo "Example: make CROSS_COMPILE=aarch64-none-linux-gnu- build-kernel"; \
+		printf >&2 "\n\033[1;31mERROR: CROSS_COMPILE variable is not set.\033[0m\n"; \
+		printf >&2 "Please set it via the command line or environment to your AArch64 toolchain prefix.\n"; \
+		printf >&2 "Example: make CROSS_COMPILE=aarch64-unknown-linux-gnu- build-kernel\n\n"; \
 		exit 1; \
 	fi
 	@if ! command -v $(CC) &> /dev/null; then \
@@ -133,8 +133,8 @@ configure-kernel: $(KERNEL_OUT)/.config
 $(KERNEL_IMAGE): $(KERNEL_OUT)/.config
 	$(call check_tools)
 	@echo "--- Building Kernel Image ---"
-	# Use nproc if available, otherwise default to 1 core on macOS without coreutils
-	$(MAKE) -C $(KERNEL_SRC) O=$(KERNEL_OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -j$$(sysctl -n hw.ncpu || echo 1) Image modules
+	# Use nproc (Linux), fallback to sysctl (macOS), fallback to 1 core
+	$(MAKE) -C $(KERNEL_SRC) O=$(KERNEL_OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1) Image modules
 
 # Build target depends on the image
 build-kernel: $(KERNEL_IMAGE)
